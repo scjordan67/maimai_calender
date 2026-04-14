@@ -10,7 +10,7 @@
   "keywords": ["万年历", "农历", "节气", "宜忌", "吉时", "日历", "文学", "传统文化"],
   "categories": ["Utility Tools"],
   "host_application": {
-    "min_version": "1.0.0",
+    "min_version": "0.0.0",
     "max_version": "4.0.0"
   },
   "default_locale": "zh-CN",
