@@ -90,20 +90,6 @@ SOLAR_TERMS_INFO: List[Tuple[str, int, float]] = [
     ("大雪", 12,  6.7400), ("冬至", 12, 21.9400),
 ]
 
-# 宜事活动池
-YI_POOL: List[str] = [
-    "祈福", "出行", "嫁娶", "开市", "立券", "交易", "纳财",
-    "扫舍", "安床", "解除", "沐浴", "裁衣", "合帐", "冠笄",
-    "移徙", "入宅", "安香", "纳畜", "牧养", "求医", "赴任",
-    "入学", "开光", "塑绘", "栽种", "掘井", "修造", "动土",
-]
-# 忌事活动池
-JI_POOL: List[str] = [
-    "嫁娶", "动土", "破土", "开市", "移徙", "出行",
-    "安葬", "入宅", "修造", "词讼", "上梁", "竖柱",
-    "伐木", "作灶", "穿井", "安床", "行船", "祭祀",
-]
-
 # 十二时辰（名称, 时间段）
 SHI_CHEN: List[Tuple[str, str]] = [
     ("子时", "23:00~01:00"), ("丑时", "01:00~03:00"),
@@ -114,19 +100,79 @@ SHI_CHEN: List[Tuple[str, str]] = [
     ("戌时", "19:00~21:00"), ("亥时", "21:00~23:00"),
 ]
 
-# 日天干 → 当日四个吉时（时辰索引）
-#   根据传统"建除法"简化，每日天干固定对应四个吉时
-JI_SHI_MAP: Dict[int, List[int]] = {
-    0: [2, 4, 8, 10],   # 甲 → 寅、辰、申、戌
-    1: [1, 3, 7,  9],   # 乙 → 丑、卯、未、酉
-    2: [0, 4, 6, 10],   # 丙 → 子、辰、午、戌
-    3: [1, 3, 5, 11],   # 丁 → 丑、卯、巳、亥
-    4: [2, 6, 8, 10],   # 戊 → 寅、午、申、戌
-    5: [1, 5, 7, 11],   # 己 → 丑、巳、未、亥
-    6: [0, 2, 8, 10],   # 庚 → 子、寅、申、戌
-    7: [3, 5, 7,  9],   # 辛 → 卯、巳、未、酉
-    8: [0, 4, 6, 10],   # 壬 → 子、辰、午、戌
-    9: [1, 3, 5,  9],   # 癸 → 丑、卯、巳、酉
+# ── 建除十二值神（宜/忌核心来源）─────────────────────────────────────
+# 计算公式：(日支序号 - 月支序号) % 12 → 值神索引
+JIAN_CHU_NAMES: List[str] = [
+    "建", "除", "满", "平", "定", "执", "破", "危", "成", "收", "开", "闭"
+]
+
+# 农历月份 → 对应地支序号（子=0…亥=11）
+# 正月建寅(2)，二月建卯(3)，依次类推
+LUNAR_MONTH_BRANCH: Dict[int, int] = {
+    1: 2, 2: 3, 3: 4, 4: 5, 5: 6,  6: 7,
+    7: 8, 8: 9, 9: 10, 10: 11, 11: 0, 12: 1,
+}
+
+# 每个值神的宜事列表
+JIAN_CHU_YI: Dict[str, List[str]] = {
+    "建": ["出行", "祭祀", "祈福", "开光", "上梁", "竖柱"],
+    "除": ["解除", "扫舍", "沐浴", "理发", "裁衣", "求医"],
+    "满": ["纳财", "开市", "入宅", "祭祀", "嫁娶"],
+    "平": ["出行", "移徙", "嫁娶", "纳畜", "交易"],
+    "定": ["嫁娶", "开市", "立券", "交易", "纳财", "祭祀"],
+    "执": ["祭祀", "捕捉", "纳畜", "动土"],
+    "破": ["求医", "疗病"],                        # 破日诸事不宜，仅宜求医
+    "危": ["祭祀", "解除", "求医"],
+    "成": ["嫁娶", "开市", "移徙", "入宅", "纳财", "立券"],
+    "收": ["纳财", "收敛", "祭祀", "纳畜", "嫁娶"],
+    "开": ["开市", "出行", "嫁娶", "移徙", "入宅", "祭祀"],
+    "闭": ["动土", "修造", "安葬", "塞穴"],
+}
+
+# 每个值神的忌事列表
+JIAN_CHU_JI: Dict[str, List[str]] = {
+    "建": ["嫁娶", "动土", "安葬", "开市"],
+    "除": ["嫁娶", "安葬", "出行"],
+    "满": ["嫁娶", "动土", "安葬", "出行"],
+    "平": ["动土", "安葬", "开市"],
+    "定": ["词讼", "出行", "动土"],
+    "执": ["嫁娶", "开市", "出行", "移徙"],
+    "破": ["嫁娶", "开市", "动土", "移徙", "入宅", "出行", "安葬"],
+    "危": ["登高", "安床", "出行", "嫁娶"],
+    "成": ["词讼", "动土"],
+    "收": ["出行", "开市", "嫁娶", "安葬"],
+    "开": ["安葬", "动土"],
+    "闭": ["嫁娶", "出行", "开市", "开光"],
+}
+
+# ── 天乙贵人时（吉时主要来源）──────────────────────────────────────────
+# 按日天干索引（甲=0…癸=9）→ 天乙贵人所在两个时辰（地支序号）
+TIANYI_GUIREN: Dict[int, List[int]] = {
+    0: [1, 7],   # 甲 → 丑(1)、未(7)
+    1: [0, 8],   # 乙 → 子(0)、申(8)
+    2: [11, 9],  # 丙 → 亥(11)、酉(9)
+    3: [11, 9],  # 丁 → 亥(11)、酉(9)
+    4: [1, 7],   # 戊 → 丑(1)、未(7)
+    5: [0, 8],   # 己 → 子(0)、申(8)
+    6: [1, 7],   # 庚 → 丑(1)、未(7)
+    7: [6, 2],   # 辛 → 午(6)、寅(2)
+    8: [3, 5],   # 壬 → 卯(3)、巳(5)
+    9: [3, 5],   # 癸 → 卯(3)、巳(5)
+}
+
+# 日禄时：日天干对应"禄"所在地支序号
+# 甲禄在寅，乙禄在卯，丙/戊禄在巳，丁/己禄在午，庚禄在申，辛禄在酉，壬禄在亥，癸禄在子
+RI_LU: Dict[int, int] = {
+    0: 2,   # 甲 → 寅
+    1: 3,   # 乙 → 卯
+    2: 5,   # 丙 → 巳
+    3: 6,   # 丁 → 午
+    4: 5,   # 戊 → 巳
+    5: 6,   # 己 → 午
+    6: 8,   # 庚 → 申
+    7: 9,   # 辛 → 酉
+    8: 11,  # 壬 → 亥
+    9: 0,   # 癸 → 子
 }
 
 
@@ -190,30 +236,65 @@ def get_ganzhi_day(year: int, month: int, day: int) -> str:
     return f"{HEAVENLY_STEMS[offset % 10]}{EARTHLY_BRANCHES[offset % 12]}"
 
 
-def get_yi_ji(year: int, month: int, day: int) -> Tuple[List[str], List[str]]:
+def get_jian_chu(lunar_month: int, day_branch_idx: int) -> str:
     """
-    根据日干支生成今日宜 / 忌（确定性随机，同一天结果固定）。
+    根据农历月份和日支序号，计算当日建除十二值神。
+    公式：(日支序号 - 月建地支序号) % 12 → 值神索引
     """
-    ganzhi_day = get_ganzhi_day(year, month, day)
-    seed = hash(f"{year}{month:02d}{day:02d}{ganzhi_day}") & 0x7FFFFFFF
-    rng  = random.Random(seed)
-    yi   = rng.sample(YI_POOL, rng.randint(4, 6))
-    # 确保忌事与宜事不重叠
-    ji_candidates = [j for j in JI_POOL if j not in yi]
-    if len(ji_candidates) < 2:
-        ji_candidates = JI_POOL
-    ji = rng.sample(ji_candidates, min(rng.randint(2, 4), len(ji_candidates)))
-    return yi, ji
+    month_branch = LUNAR_MONTH_BRANCH.get(lunar_month, 2)
+    idx = (day_branch_idx - month_branch) % 12
+    return JIAN_CHU_NAMES[idx]
+
+
+def get_yi_ji(
+    year: int, month: int, day: int,
+    lunar_month: Optional[int] = None,
+) -> Tuple[List[str], List[str], str]:
+    """
+    使用建除十二值神推算今日宜 / 忌，同时返回值神名称。
+
+    参数
+    ----
+    lunar_month : 农历月份（1‒12）。若为 None 则用公历月份近似（降级）。
+
+    返回
+    ----
+    (宜列表, 忌列表, 值神名)
+    """
+    gz_day          = get_ganzhi_day(year, month, day)
+    day_branch_idx  = EARTHLY_BRANCHES.index(gz_day[1])
+    lm              = lunar_month if lunar_month is not None else month
+    zhi_shen        = get_jian_chu(lm, day_branch_idx)
+
+    yi = JIAN_CHU_YI.get(zhi_shen, [])
+    ji = JIAN_CHU_JI.get(zhi_shen, [])
+    return yi, ji, zhi_shen
 
 
 def get_ji_shi(year: int, month: int, day: int) -> List[str]:
     """
-    根据日天干获取今日吉时（传统历法简化算法）。
+    使用天乙贵人时 + 日禄时推算今日四个吉时。
+
+    天乙贵人时（2个）：传统择日最重要的吉神时辰。
+    日禄时（1个）：日天干的"禄"所在时辰，财运/事业吉利。
+    进禄时（1个）：禄前一位时辰，为"进气"之时。
+    去重后取前四，按时辰先后排序。
     """
-    ganzhi_day = get_ganzhi_day(year, month, day)
-    stem_idx   = HEAVENLY_STEMS.index(ganzhi_day[0])
-    indices    = JI_SHI_MAP.get(stem_idx, [2, 4, 8, 10])
-    return [f"{SHI_CHEN[i][0]}（{SHI_CHEN[i][1]}）" for i in indices]
+    gz_day    = get_ganzhi_day(year, month, day)
+    stem_idx  = HEAVENLY_STEMS.index(gz_day[0])
+
+    guiren    = TIANYI_GUIREN.get(stem_idx, [1, 7])   # 天乙贵人两个时辰
+    lu        = RI_LU.get(stem_idx, 2)                 # 日禄时
+    jin_lu    = (lu + 1) % 12                          # 进禄时（禄后一位）
+
+    seen: List[int] = []
+    for t in guiren + [lu, jin_lu]:
+        if t not in seen:
+            seen.append(t)
+
+    # 按时辰顺序排序（子=0 → 亥=11，注意子时跨日用0排序）
+    seen_sorted = sorted(seen[:4], key=lambda x: x)
+    return [f"{SHI_CHEN[i][0]}（{SHI_CHEN[i][1]}）" for i in seen_sorted]
 
 
 def get_lunar_info(year: int, month: int, day: int) -> Dict[str, str]:
@@ -233,6 +314,7 @@ def get_lunar_info(year: int, month: int, day: int) -> Dict[str, str]:
                 "lunar_date":       f"{lunar_month_str}{lunar_day_str}",
                 "year_ganzhi":      year_ganzhi,
                 "zodiac":           zodiac,
+                "lunar_month":      str(lunar.month),
                 "lunar_available":  "true",
             }
         except Exception as exc:
@@ -244,6 +326,7 @@ def get_lunar_info(year: int, month: int, day: int) -> Dict[str, str]:
         "lunar_date":      "（需安装 lunardate 库）",
         "year_ganzhi":     year_ganzhi,
         "zodiac":          zodiac,
+        "lunar_month":     str(month),   # 降级时用公历月份近似
         "lunar_available": "false",
     }
 
@@ -287,10 +370,11 @@ def build_calendar_message(today: Optional[date] = None) -> str:
     # 节气
     solar_term = calc_solar_term(year, month, day)
 
-    # 宜 / 忌
-    yi, ji = get_yi_ji(year, month, day)
+    # 宜 / 忌（建除十二值神）
+    lunar_month_int = int(lunar_info.get("lunar_month", month))
+    yi, ji, zhi_shen = get_yi_ji(year, month, day, lunar_month=lunar_month_int)
 
-    # 吉时
+    # 吉时（天乙贵人时 + 日禄时）
     ji_shi = get_ji_shi(year, month, day)
 
     # 语录
@@ -305,6 +389,7 @@ def build_calendar_message(today: Optional[date] = None) -> str:
     lines.append(f"📅  {year}年{month}月{day}日  {weekday}")
     lines.append(f"农历 {year_gz}年（{zodiac}年）{lunar_date}")
     lines.append(f"干支  {year_gz}年 · {month_gz}月 · {day_gz}日")
+    lines.append(f"今日值神：{zhi_shen}")
 
     # ── 节气 ──
     if solar_term:
