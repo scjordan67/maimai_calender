@@ -476,8 +476,8 @@ class DailyCalendarPlugin(BasePlugin):
         },
     }
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         self._scheduler: _DailyScheduler = _DailyScheduler()
         self._scheduler_started: bool = False
         # 在事件循环中延迟启动定时任务（等待配置加载完成）
