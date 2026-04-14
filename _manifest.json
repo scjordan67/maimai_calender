@@ -1,0 +1,28 @@
+{
+  "manifest_version": 1,
+  "name": "每日万年历",
+  "version": "1.0.0",
+  "description": "每天定时在指定群聊或私聊发送今日万年历，内容涵盖农历日期、干支纪年、生肖、节气（寿星公式精算）、宜/忌事项、今日吉时，底部附一条随机古典文学语录。支持 /万年历 命令即时推送。",
+  "author": {
+    "name": "Shao Chi"
+  },
+  "license": "MIT",
+  "keywords": ["万年历", "农历", "节气", "宜忌", "吉时", "日历", "文学", "传统文化"],
+  "categories": ["Utility Tools"],
+  "host_application": {
+    "min_version": "1.0.0",
+    "max_version": "4.0.0"
+  },
+  "default_locale": "zh-CN",
+  "plugin_info": {
+    "is_built_in": false,
+    "plugin_type": "general",
+    "components": [
+      {
+        "type": "command",
+        "name": "calendar_now",
+        "description": "立即发送今日万年历"
+      }
+    ]
+  }
+}
