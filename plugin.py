@@ -175,6 +175,37 @@ RI_LU: Dict[int, int] = {
     9: 0,   # 癸 → 子
 }
 
+# ── 十二地支配十二天神 ──────────────────────────────────────────────────
+# 固定映射：日支序号（子=0…亥=11）→ (天神名, 黄/黑道)
+# 口诀：子青龙 丑明堂 寅天刑 卯朱雀 辰金匮 巳天德
+#        午白虎 未玉堂 申天牢 酉玄武 戌司命 亥勾陈
+# 黄道六神：青龙、明堂、金匮、天德、玉堂、司命
+# 黑道六神：天刑、朱雀、白虎、天牢、玄武、勾陈
+DAY_TIANSHEN: List[Tuple[str, str]] = [
+    ("青龙", "黄道"),  # 子
+    ("明堂", "黄道"),  # 丑
+    ("天刑", "黑道"),  # 寅
+    ("朱雀", "黑道"),  # 卯
+    ("金匮", "黄道"),  # 辰
+    ("天德", "黄道"),  # 巳
+    ("白虎", "黑道"),  # 午
+    ("玉堂", "黄道"),  # 未
+    ("天牢", "黑道"),  # 申
+    ("玄武", "黑道"),  # 酉
+    ("司命", "黄道"),  # 戌
+    ("勾陈", "黑道"),  # 亥
+]
+
+# ── 建除值神的黄道/黑道归属 ─────────────────────────────────────────────
+# 口诀："建满平收黑，除危定执黄，成开皆可用，闭破不能行"
+# 黄道：除、危、定、执、成、开
+# 黑道：建、满、平、收、闭、破
+JIAN_CHU_DAO: Dict[str, str] = {
+    "建": "黑道", "除": "黄道", "满": "黑道", "平": "黑道",
+    "定": "黄道", "执": "黄道", "破": "黑道", "危": "黄道",
+    "成": "黄道", "收": "黑道", "开": "黄道", "闭": "黑道",
+}
+
 
 # ============================================================
 # 传统历法计算函数
@@ -297,6 +328,20 @@ def get_ji_shi(year: int, month: int, day: int) -> List[str]:
     return [f"{SHI_CHEN[i][0]}（{SHI_CHEN[i][1]}）" for i in seen_sorted]
 
 
+def get_tianshen(year: int, month: int, day: int) -> Tuple[str, str]:
+    """
+    根据日柱地支查十二天神及黄/黑道属性。
+    映射固定：子→青龙(黄)，丑→明堂(黄)，寅→天刑(黑)，卯→朱雀(黑)，
+              辰→金匮(黄)，巳→天德(黄)，午→白虎(黑)，未→玉堂(黄)，
+              申→天牢(黑)，酉→玄武(黑)，戌→司命(黄)，亥→勾陈(黑)。
+
+    返回 (天神名, "黄道"/"黑道")
+    """
+    gz_day     = get_ganzhi_day(year, month, day)
+    branch_idx = EARTHLY_BRANCHES.index(gz_day[1])
+    return DAY_TIANSHEN[branch_idx]
+
+
 def get_lunar_info(year: int, month: int, day: int) -> Dict[str, str]:
     """
     获取农历日期、干支年、生肖信息。
@@ -374,6 +419,20 @@ def build_calendar_message(today: Optional[date] = None) -> str:
     lunar_month_int = int(lunar_info.get("lunar_month", month))
     yi, ji, zhi_shen = get_yi_ji(year, month, day, lunar_month=lunar_month_int)
 
+    # 建除黄/黑道
+    jian_chu_dao = JIAN_CHU_DAO.get(zhi_shen, "")
+
+    # 十二天神
+    tianshen, tianshen_dao = get_tianshen(year, month, day)
+
+    # 综合黄/黑道判断：两套系统均为黄道 → 黄道吉日；均为黑道 → 黑道凶日；否则中性
+    if jian_chu_dao == "黄道" and tianshen_dao == "黄道":
+        dao_label = "🟡 黄道吉日"
+    elif jian_chu_dao == "黑道" and tianshen_dao == "黑道":
+        dao_label = "⚫ 黑道凶日"
+    else:
+        dao_label = "⚪ 诸事斟酌"
+
     # 吉时（天乙贵人时 + 日禄时）
     ji_shi = get_ji_shi(year, month, day)
 
@@ -389,7 +448,11 @@ def build_calendar_message(today: Optional[date] = None) -> str:
     lines.append(f"📅  {year}年{month}月{day}日  {weekday}")
     lines.append(f"农历 {year_gz}年（{zodiac}年）{lunar_date}")
     lines.append(f"干支  {year_gz}年 · {month_gz}月 · {day_gz}日")
-    lines.append(f"今日值神：{zhi_shen}")
+    lines.append(
+        f"值神  {zhi_shen}（{jian_chu_dao}）  "
+        f"天神  {tianshen}（{tianshen_dao}）"
+    )
+    lines.append(dao_label)
 
     # ── 节气 ──
     if solar_term:
